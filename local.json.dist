@@ -1,0 +1,11 @@
+{
+    "mongo_host": "127.0.0.1",
+    "mongo_db": "bouncer",
+    "mongo_collection": "session_map",
+    "session_cookie": "sid",
+    "failover_url": "http://example.com",
+    "clean_uri_regexp": "^/logout",
+    "clean_url": "http://example.com/logout",
+    "listen_host": "127.0.0.1",
+    "listen_port": "7990"
+}

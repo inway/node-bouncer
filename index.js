@@ -14,12 +14,13 @@ var util = require("util"),
         "mongo_db": "bouncer",
         "mongo_collection": "session_map",
         "session_cookie": "sid",
-        "failover_url": "http://example.com",
+        "failover_url": "http://example.com/",
         "clean_uri_regexp": "^/logout",
         "clean_url": "http://example.com/logout",
         "listen_host": "127.0.0.1",
         "listen_port": "7990",
         "log_level": "debug",
+        "debug": 1,
         "response_timeout": 120000
     };
 
@@ -45,11 +46,15 @@ module.exports = function(opts) {
             filename: 'bouncer.log'
         }
     });
-    var log = winston.loggers.get('bouncer');
+    var log = winston.loggers.get('bouncer'),
+        debug_level = nconf.get("debug");
     log.info("Create session bouncer");
-    log.debug("Bouncer settings");
-    for (var key in defaults) {
-        log.debug(" - " + key + ": " + nconf.get(key) + (nconf.get(key) === defaults[key] ? "  (default)" : "  (overriden from: " + defaults[key] + ")"));
+    
+    if (debug_level >= 2) {
+        log.debug("Bouncer settings");
+        for (var key in defaults) {
+            log.debug(" - " + key + ": " + nconf.get(key) + (nconf.get(key) === defaults[key] ? "  (default)" : "  (overriden from: " + defaults[key] + ")"));
+        }
     }
     
     /**
@@ -85,7 +90,11 @@ module.exports = function(opts) {
     var route = function(req, res, bounce, key, upstream, cache, failover) {
         var peer = req.socket.address(),
             url_parsed = url.parse(req.url),
+            target = undefined;
+        
+        if (upstream != undefined) {
             target = url.resolve(upstream, req.url);
+        }
     
         if (req.headers && ('x-real-ip' in req.headers)) {
             peer = {
@@ -94,7 +103,7 @@ module.exports = function(opts) {
             };
         }
     
-        if (bounce == null && target != null) {
+        if (bounce == null && failover != null) {
             target = url.resolve(failover, req.url);
             log.info(peer.address + ':' + peer.port + ' ' + req.method + ' "' + req.url + '" -> ' + key + ' [fail] => ' + target);
             redirect(res, target);
@@ -137,18 +146,21 @@ module.exports = function(opts) {
                 if (localMap[routerKey] != null) { // First look-up in localMap
                     route(req, res, bounce, routerKey, localMap[routerKey], 'cache');
                 } else { // If not found, look in remote map
-                    //console.log("Local map not found for key: " + routerKey);
+                    if (debug_level >= 3)
+                        log.debug("Local map not found for key: " + routerKey);
                     /* Call lookup on remote collection */
                     session_map.findOne({
                         sid: routerKey
                     }, function(err, doc) {
                         //console.log(doc);
                         if (err == null && doc != null) {
-                            //console.log("Remote map found for key: " + routerKey + ", storing to local map");
+                            if (debug_level >= 3)
+                                log.debug("Remote map found for key: " + routerKey + ", storing to local map");
                             localMap[routerKey] = url.parse(doc.target);
                             route(req, res, bounce, routerKey, localMap[routerKey], 'remote');
                         } else {
-                            //console.log("Remote map not found for key: " + routerKey);
+                            if (debug_level >= 3)
+                                log.debug("Remote map not found for key: " + routerKey + " redirect to failover: " + nconf.get('failover_url'));
                             route(req, res, null, routerKey, null, null, nconf.get('failover_url'));
                         }
                     });
@@ -198,6 +210,7 @@ module.exports = function(opts) {
     return {
         server: undefined,
         address: function () { return this.server.address() },
+        close: function () { return this.server.close() },
         listen: function(port, address) {
             var self = this,
                 cb = undefined;

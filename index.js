@@ -8,28 +8,31 @@ var util = require("util"),
     https = require('https'),
     through = require('through'),
     bouncy = require('bouncy'),
-    assert = require('assert');
+    assert = require('assert'),
+    defaults = {
+        "mongo_host": "127.0.0.1",
+        "mongo_db": "bouncer",
+        "mongo_collection": "session_map",
+        "session_cookie": "sid",
+        "failover_url": "http://example.com",
+        "clean_uri_regexp": "^/logout",
+        "clean_url": "http://example.com/logout",
+        "listen_host": "127.0.0.1",
+        "listen_port": "7990",
+        "log_level": "debug",
+        "response_timeout": 120000
+    };
 
 module.exports = function(opts) {
     nconf.overrides(opts)
          .argv()
          .env()
          .file('local.json')
-         .defaults({
-             "mongo_host": "127.0.0.1",
-             "mongo_db": "bouncer",
-             "mongo_collection": "session_map",
-             "session_cookie": "sid",
-             "failover_url": "http://example.com",
-             "clean_uri_regexp": "^/logout",
-             "clean_url": "http://example.com/logout",
-             "listen_host": "127.0.0.1",
-             "listen_port": "7990"
-        });
+         .defaults(defaults);
     
     winston.loggers.add('bouncer', {
         console: {
-            level: null,
+            level: nconf.get('log_level'),
             colorize: 'true',
             label: 'bouncer',
             timestamp: true
@@ -44,6 +47,10 @@ module.exports = function(opts) {
     });
     var log = winston.loggers.get('bouncer');
     log.info("Create session bouncer");
+    log.debug("Bouncer settings");
+    for (var key in defaults) {
+        log.debug(" - " + key + ": " + nconf.get(key) + (nconf.get(key) === defaults[key] ? "  (default)" : "  (overriden from: " + defaults[key] + ")"));
+    }
     
     /**
      * Display session map contents
@@ -108,9 +115,9 @@ module.exports = function(opts) {
      * Create bouncer code
      */
     var createBouncer = function(session_map) {
-        log.info("Prepare bouncer");
+        log.info("Prepare bouncer instance");
         var localMap = {},
-            server = bouncy(function(req, res, bounce) {
+            server = bouncy({socketTimeout: nconf.get("response_timeout")}, function(req, res, bounce) {
                 var routerKey = req.headers.host;
                 var cookies = {};
                 req.headers && ('cookie' in req.headers) && req.headers.cookie.split(';').forEach(function(cookie) {
@@ -177,11 +184,12 @@ module.exports = function(opts) {
                 exit();
             });
         
-            log.info("Loading session map from collection: " + nconf.get('mongo_collection'));
+            log.debug("Loading session map from collection: " + nconf.get('mongo_collection'));
         
             var session_map = db.collection(nconf.get('mongo_collection'));
             displaySessionMap(session_map);
             //session_map.remove();
+            log.info("Set up done")
             var server = createBouncer(session_map);
             cb(server);
         });

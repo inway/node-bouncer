@@ -187,13 +187,12 @@ module.exports = function(opts) {
          */
         db_connector.open(function(err, db) {
             if (err != null) {
-                log.fatal("Failed connecting to MongoDB");
-                exit();
+                log.error("Failed connecting to MongoDB");
+                throw "Error connecting to mongo db";
             }
             log.debug("Connected to MongoDB")
-            db.on("close", function(error) {
-                log.fatal("Connection to the MongoDB was closed!");
-                exit();
+            db.on("close", function() {
+                log.info("Connection to the MongoDB was closed!");
             });
         
             log.debug("Loading session map from collection: " + nconf.get('mongo_collection'));
@@ -203,14 +202,25 @@ module.exports = function(opts) {
             //session_map.remove();
             log.info("Set up done")
             var server = createBouncer(session_map);
-            cb(server);
+            cb(server, db_connector);
         });
     };
 
     return {
         server: undefined,
+        db: undefined,
         address: function () { return this.server.address() },
-        close: function () { return this.server.close() },
+        close: function () {
+            var self = this;
+
+            log.debug("Closing bouncer");
+            this.server.close(function() {
+                log.debug("Bouncer stopped, going to stop Mongo");
+                self.db.close();
+            });
+            
+            return;
+        },
         listen: function(port, address) {
             var self = this,
                 cb = undefined;
@@ -221,8 +231,9 @@ module.exports = function(opts) {
             }
 
             if (self.server == undefined) {
-                prepareBouncer(function(srv) {
+                prepareBouncer(function(srv, db) {
                     self.server = srv;
+                    self.db = db;
 
                     address = address || nconf.get('listen_host');
                     port = port || nconf.get('listen_port');

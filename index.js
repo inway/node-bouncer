@@ -10,7 +10,7 @@ var util = require("util"),
     bouncy = require('bouncy'),
     assert = require('assert');
 
-module.exports = function(opts, cb) {
+module.exports = function(opts) {
     nconf.overrides(opts)
          .argv()
          .env()
@@ -189,19 +189,17 @@ module.exports = function(opts, cb) {
 
     return {
         server: undefined,
-        prepare: function(cb) {
-            var self = this;
-            prepareBouncer(function(srv) {
-                self.server = srv;
-                cb(srv);
-            });
-        },
         listen: function(port, address) {
-            if (this.server == undefined) {
-                this.prepare(function(srv) {
+            var self = this;
+            if (self.server == undefined) {
+                prepareBouncer(function(srv) {
+                    self.server = srv;
+                    
                     address = address || nconf.get('listen_host');
                     port = port || nconf.get('listen_port');
+                    
                     log.info("Start listening on port: " + address + ':' + port);
+                    
                     srv.listen(port, address);
                 })
             }

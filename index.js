@@ -20,6 +20,9 @@ var util = require("util"),
         "listen_host": "127.0.0.1",
         "listen_port": "7990",
         "log_level": "debug",
+        "log_console": 0,
+        "log_file": 0,
+        "log_file_name": "bouncer.log",
         "debug": 1,
         "response_timeout": 120000
     };
@@ -31,21 +34,36 @@ module.exports = function(opts) {
          .file('local.json')
          .defaults(defaults);
     
-    winston.loggers.add('bouncer', {
-        console: {
-            level: nconf.get('log_level'),
-            colorize: 'true',
-            label: 'bouncer',
-            timestamp: true
-        },
-        file: {
-            level: null,
-            timestamp: true,
-            json: false,
-            maxsize: 10485760,
-            filename: 'bouncer.log'
-        }
-    });
+    var transports = {};
+    if (nconf.get('log_console'))
+        transports['console'] = {
+                level: nconf.get('log_level'),
+                colorize: 'true',
+                label: 'bouncer',
+                timestamp: true
+            };
+    if (nconf.get('log_file'))
+        transports['file'] = {
+                level: null,
+                timestamp: true,
+                json: false,
+                maxsize: 10485760,
+                filename: nconf.get('log_file_name')
+            };
+
+    // Strangely not supported!
+    if (Object.keys(transports).length == 0) {
+        transports['file'] = {
+                level: null,
+                timestamp: true,
+                json: false,
+                maxsize: 10485760,
+                filename: '/dev/null'
+            };
+    }
+
+    winston.loggers.add('bouncer', transports);
+
     var log = winston.loggers.get('bouncer'),
         debug_level = nconf.get("debug");
     log.info("Create session bouncer");

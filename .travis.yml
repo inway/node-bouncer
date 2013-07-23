@@ -3,4 +3,4 @@ node_js:
   - 0.8
 services: mongodb
 before_script:
-  - mongo bouncer --eval 'db.session_map.save({sid: "abcdefghijklmnopqrstuvwxyz", target: "http://localhost:9901/"});'
+  - "mongo bouncer --eval 'db.session_map.save({sid: \"abcdefghijklmnopqrstuvwxyz\", target: \"http://localhost:9901/\"});'"

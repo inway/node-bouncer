@@ -197,20 +197,30 @@ module.exports = function(opts) {
 
     return {
         server: undefined,
+        address: function () { return this.server.address() },
         listen: function(port, address) {
-            var self = this;
+            var self = this,
+                cb = undefined;
+
+            if (typeof(port) === "function") {
+                cb = port;
+                port = address = undefined;
+            }
+
             if (self.server == undefined) {
                 prepareBouncer(function(srv) {
                     self.server = srv;
-                    
+
                     address = address || nconf.get('listen_host');
                     port = port || nconf.get('listen_port');
-                    
+
                     log.info("Start listening on port: " + address + ':' + port);
-                    
-                    srv.listen(port, address);
+
+                    srv.listen(port, address, cb);
                 })
             }
+            
+            return this;
         }
     }
 }

@@ -9,6 +9,8 @@ var util = require("util"),
     through = require('through'),
     bouncy = require('bouncy'),
     assert = require('assert'),
+    tracker = undefined,
+    tracker_key = undefined,
     defaults = {
         "mongo_host": "127.0.0.1",
         "mongo_db": "bouncer",
@@ -19,6 +21,7 @@ var util = require("util"),
         "clean_url": "http://example.com/logout",
         "listen_host": "127.0.0.1",
         "listen_port": "7990",
+        "tracker_siteid": undefined,
         "log_level": "debug",
         "log_console": 0,
         "log_file": 0,
@@ -67,14 +70,43 @@ module.exports = function(opts) {
     var log = winston.loggers.get('bouncer'),
         debug_level = nconf.get("debug");
     log.info("Create session bouncer");
-    
+
     if (debug_level >= 2) {
         log.debug("Bouncer settings");
         for (var key in defaults) {
             log.debug(" - " + key + ": " + nconf.get(key) + (nconf.get(key) === defaults[key] ? "  (default)" : "  (overriden from: " + defaults[key] + ")"));
         }
     }
-    
+
+    /**
+     * Set-up optional piwik tracker
+     */
+    if (nconf.get('tracker_siteid')) {
+        log.debug("Setting up tracker");
+        try {
+            var PiwikTracker = require('piwik-tracker'),
+                site_id = nconf.get('tracker_siteid'),
+                piwik_url = nconf.get('tracker_url');
+
+            tracker = new PiwikTracker(site_id, piwik_url);
+            tracker_key = nconf.get('tracker_key');
+
+            tracker.on('error', function(err) {
+                log.error("Error occured while reporting tracking data to Piwik: ", err);
+            });
+
+            log.debug("Tracker ready: ", tracker);
+        } catch(e) {
+            log.fatal("Piwik tracker module is not available, but configuration is set - fatal error");
+            throw e;
+        }
+
+        if (tracker == undefined)
+            throw "Tracker not initialized properly";
+        if (tracker_key == undefined)
+            throw "No Piwik key is set! Use tracker_key config variable to set one";
+    }
+
     /**
      * Display session map contents
      */
@@ -90,18 +122,59 @@ module.exports = function(opts) {
             }
         });
     };
-    
+
+    var track = function(req, res, options, cvars) {
+        if (tracker == undefined)
+            return;
+
+        var peer = req.socket.address(),
+            opts = {
+                apiv: 1,
+                url: req.url,
+                token_auth: tracker_key,
+            },
+            cvar = {
+                '1': ['HTTP method', req.method]
+            },
+            cvar_idx = 2;
+
+        if (peer != undefined)
+            opts['cip'] = peer.address;
+        if (req.headers['User-Agent'] != undefined)
+            opts['ua'] = req.headers['User-Agent'];
+        if (req.headers['Accept-Language'] != undefined)
+            opts['lang'] = req.headers['Accept-Language'];
+
+        // Merge with user supplied options
+        for(var prop in options) {
+            opts[prop] = options[prop];
+        }
+
+        [].slice(cvar, 1).forEach(function (cv) {
+            cvar[cvar_idx++] = cv;
+        });
+        opts['cvar'] = JSON.stringify(cvar)
+
+        log.debug("Sending tracking data");
+        log.debug(opts);
+
+        tracker.track(opts);
+    };
+
     /**
      * Genaretes 302 response to redirect user to target URL
      */
-    var redirect = function(res, target) {
+    var redirect = function(req, res, target) {
         res.statusCode = 302;
         res.setHeader("Location", target);
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         res.setHeader("Expires", "Thu, 01 Jan 1970 00:00:00 GMT");
         res.end();
+
+        if (tracker != undefined)
+            track(req, res);
     };
-    
+
     /**
      * Finally log and route connection to upstream server
      */
@@ -109,35 +182,38 @@ module.exports = function(opts) {
         var peer = req.socket.address(),
             url_parsed = url.parse(req.url),
             target = undefined;
-        
+
         if (upstream != undefined) {
             target = url.resolve(upstream, req.url);
         }
-    
+
         if (req.headers && ('x-real-ip' in req.headers)) {
             peer = {
                 'address': req.headers['x-real-ip'],
                 'port': req.headers['x-real-port']
             };
         }
-    
+
         if (bounce == null && failover != null) {
             target = url.resolve(failover, req.url);
             log.info(peer.address + ':' + peer.port + ' ' + req.method + ' "' + req.url + '" -> ' + key + ' [fail] => ' + target);
-            redirect(res, target);
+            redirect(req, res, target);
             return;
         }
-    
+
         if (url_parsed != null && 'path' in url_parsed && url_parsed.path != null && url_parsed.path.match(nconf.get('clean_uri_regexp'))) {
             target = nconf.get('clean_url');
             log.info(peer.address + ':' + peer.port + ' ' + req.method + ' "' + req.url + '" -> ' + key + ' [' + cache + '] => ' + target);
-            redirect(res, target);
+            redirect(req, res, target);
         } else {
             log.info(peer.address + ':' + peer.port + ' ' + req.method + ' "' + req.url + '" -> ' + key + ' [' + cache + '] -> ' + target);
             bounce(target);
+
+            if (tracker != undefined)
+                track(req, res)
         }
     };
-    
+
     /**
      * Create bouncer code
      */
@@ -192,7 +268,7 @@ module.exports = function(opts) {
      */
     var prepareBouncer = function(cb) {
         log.info("Set up mongo server " + nconf.get('mongo_host') + "/" + nconf.get('mongo_db'));
-        
+
         var mongoserver = new mongodb.Server(nconf.get('mongo_host'), mongodb.Connection.DEFAULT_PORT, {
                 auto_reconnect: true
             }),
@@ -212,9 +288,9 @@ module.exports = function(opts) {
             db.on("close", function() {
                 log.info("Connection to the MongoDB was closed!");
             });
-        
+
             log.debug("Loading session map from collection: " + nconf.get('mongo_collection'));
-        
+
             var session_map = db.collection(nconf.get('mongo_collection'));
             displaySessionMap(session_map);
             //session_map.remove();

@@ -1,43 +1,46 @@
 {
     "name": "node-bouncer",
     "description": "bounce incoming requests to many backend servers based on session id mapping",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "repository": {
-        "type": "git",
-        "url": "https://github.com/InWayOpenSource/node-bouncer.git"
+	"type": "git",
+	"url": "https://github.com/InWayOpenSource/node-bouncer.git"
     },
     "main": "index.js",
     "bin": {
-        "bouncer" : "bin/bouncer.js"
+	"bouncer": "bin/bouncer.js"
     },
     "keywords": [
-        "http",
-        "proxy",
-        "router",
-        "load",
-        "balancer"
+	    "http",
+	    "proxy",
+	    "router",
+	    "load",
+	    "balancer"
     ],
     "scripts": {
-        "test" : "tap test/*.js"
+	"test": "tap test/*.js"
     },
     "dependencies": {
-        "bouncy": "https://github.com/SPodjasek/bouncy/tarball/master",
-        "nconf": ">= 0.6.7",
-        "optimist": ">= 0.6.0",
-        "winston": "",
-        "mongodb": "",
-        "assert": "",
-        "bson": "",
-        "request": "",
-        "through": ""
+	"bouncy": "https://github.com/SPodjasek/bouncy/tarball/master",
+	"nconf": ">= 0.6.7",
+	"optimist": ">= 0.6.0",
+	"winston": "",
+	"mongodb": "",
+	"assert": "",
+	"bson": "",
+	"request": "",
+	"through": ""
+    },
+    "optionalDependencies": {
+	"piwik-tracker": ">= 0.1.0"
     },
     "devDependencies": {
-        "tap": ">= 0.4.0"
+	"tap": ">= 0.4.0"
     },
     "license": "MIT",
     "author": {
-        "name": "Sebastian Podjasek",
-        "email": "sebastian@podjasek.pl",
-        "url": "http://podjasek.pl"
+	"name": "Sebastian Podjasek",
+	"email": "sebastian@podjasek.pl",
+	"url": "http://podjasek.pl"
     }
 }

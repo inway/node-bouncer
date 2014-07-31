@@ -7,5 +7,8 @@
     "clean_uri_regexp": "^/logout",
     "clean_url": "http://example.com/logout",
     "listen_host": "127.0.0.1",
-    "listen_port": "7990"
+    "listen_port": "7990",
+    "tracker_siteid": "1",
+    "tracker_url": "http://piwik.example.com/piwik.php",
+    "tracker_key": "<put your piwik token_auth here>"
 }

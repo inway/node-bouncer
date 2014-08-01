@@ -1,6 +1,8 @@
 language: node_js
 node_js:
-  - 0.8
+  - "0.8"
+  - "0.10"
+  - "0.11"
 services: mongodb
 before_script:
   - "mongo bouncer --eval 'db.session_map.save({sid: \"abcdefghijklmnopqrstuvwxyz\", target: \"http://localhost:9901/\"});'"

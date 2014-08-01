@@ -138,21 +138,37 @@ module.exports = function(opts) {
             },
             cvar_idx = 2;
 
+        if (req.headers && ('x-real-ip' in req.headers)) {
+            peer = {
+                'address': req.headers['x-real-ip'],
+                'port': req.headers['x-real-port']
+            };
+        }
+
         if (peer != undefined)
             opts['cip'] = peer.address;
-        if (req.headers['User-Agent'] != undefined)
-            opts['ua'] = req.headers['User-Agent'];
-        if (req.headers['Accept-Language'] != undefined)
-            opts['lang'] = req.headers['Accept-Language'];
+        if (req.headers['user-agent'] != undefined)
+            opts['ua'] = req.headers['user-agent'];
+        if (req.headers['accept-language'] != undefined)
+            opts['lang'] = req.headers['accept-language'];
+        if (req.headers['referer'] != undefined)
+            opts['urlref'] = req.headers['referer'];
+        if (req.headers['host'] != undefined) {
+            var url_opts = url.parse(req.url);
+            url_opts['protocol'] = req.headers['x-secure'] != undefined && req.headers['x-secure'] == 1 ? 'https:' : 'http:';
+            url_opts['host'] = req.headers['host'];
+
+            opts['url'] = url.format(url_opts);
+        }
 
         // Merge with user supplied options
         for(var prop in options) {
             opts[prop] = options[prop];
         }
 
-        [].slice(cvar, 1).forEach(function (cv) {
-            cvar[cvar_idx++] = cv;
-        });
+        for(var cv in cvars) {
+            cvar[cvar_idx++] = cvars[cv];
+        }
         opts['cvar'] = JSON.stringify(cvar)
 
         log.debug("Sending tracking data");
@@ -210,7 +226,7 @@ module.exports = function(opts) {
             bounce(target);
 
             if (tracker != undefined)
-                track(req, res)
+                track(req, res, {}, [['upstream', upstream.host]]);
         }
     };
 

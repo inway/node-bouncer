@@ -251,7 +251,16 @@ module.exports = function(opts) {
                 }
 
                 var bounce = function(target) {
-                    proxy.web(req, res, { target: target });
+                    proxy.web(req, res, { target: target }, function(e) {
+                        log.error("Received error from http-proxy");
+                        log.error(e);
+                        
+                        res.writeHead(500, {
+                            'content-type': 'text/plain',
+                            'connection': 'close'
+                        });
+                        res.end("Error handling request");
+                    });
                 };
 
                 if (localMap[routerKey] != null) { // First look-up in localMap

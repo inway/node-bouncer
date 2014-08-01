@@ -171,9 +171,6 @@ module.exports = function(opts) {
         }
         opts['cvar'] = JSON.stringify(cvar)
 
-        log.debug("Sending tracking data");
-        log.debug(opts);
-
         tracker.track(opts);
     };
 

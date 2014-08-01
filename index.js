@@ -344,7 +344,7 @@ module.exports = function(opts) {
                 port = address = undefined;
             }
 
-            if (self.server == undefined) {
+            if (this.server == undefined) {
                 prepareBouncer(function(srv, db) {
                     self.server = srv;
                     self.db = db;

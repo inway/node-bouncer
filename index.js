@@ -7,7 +7,7 @@ var util = require("util"),
     http = require('http'),
     https = require('https'),
     through = require('through'),
-    bouncy = require('bouncy'),
+    httpProxy = require('http-proxy'),
     assert = require('assert'),
     tracker = undefined,
     tracker_key = undefined,
@@ -236,7 +236,8 @@ module.exports = function(opts) {
     var createBouncer = function(session_map) {
         log.info("Prepare bouncer instance");
         var localMap = {},
-            server = bouncy({socketTimeout: nconf.get("response_timeout")}, function(req, res, bounce) {
+            proxy = httpProxy.createProxyServer({}),
+            server = http.createServer(function(req, res) {
                 var routerKey = req.headers.host;
                 var cookies = {};
                 req.headers && ('cookie' in req.headers) && req.headers.cookie.split(';').forEach(function(cookie) {
@@ -251,8 +252,11 @@ module.exports = function(opts) {
                         log.debug("  " + item + ": " + req.headers[item]);
                     }
                 }
-                //console.log(cookies);
-                //console.log("Request routing key: " + routerKey);
+
+                var bounce = function(target) {
+                    proxy.web(req, res, { target: target });
+                };
+
                 if (localMap[routerKey] != null) { // First look-up in localMap
                     route(req, res, bounce, routerKey, localMap[routerKey], 'cache');
                 } else { // If not found, look in remote map

@@ -324,15 +324,21 @@ module.exports = function(opts) {
         server: undefined,
         db: undefined,
         address: function () { return this.server.address() },
-        close: function () {
+        close: function (cb) {
             var self = this;
 
             log.debug("Closing bouncer");
             this.server.close(function() {
                 log.debug("Bouncer stopped, going to stop Mongo");
-                self.db.close();
+                self.db.close(true, function(err, result) {
+                    log.debug("Mongo stopped");
+
+                    if (typeof(cb) === "function") {
+                        cb();
+                    }
+                });
             });
-            
+
             return;
         },
         listen: function(port, address) {

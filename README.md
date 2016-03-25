@@ -2,7 +2,7 @@ node-bouncer
 ============
 
 Bounce incoming requests to many backend servers based on session id mapping.
-[![Build Status](https://secure.travis-ci.org/InWayOpenSource/node-bouncer.png)](http://travis-ci.org/InWayOpenSource/node-bouncer)
+[![Build Status](https://secure.travis-ci.org/inway/node-bouncer.png)](http://travis-ci.org/inway/node-bouncer)
 
 Features
 --------

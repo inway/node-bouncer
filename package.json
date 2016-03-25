@@ -28,7 +28,7 @@
 	"nconf": ">= 0.6.7",
 	"optimist": ">= 0.6.0",
 	"winston": "",
-	"mongodb": "",
+	"mongodb": "~1.2",
 	"assert": "",
 	"bson": "",
 	"request": "",

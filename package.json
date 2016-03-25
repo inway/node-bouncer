@@ -1,7 +1,7 @@
 {
     "name": "node-bouncer",
     "description": "bounce incoming requests to many backend servers based on session id mapping",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "repository": {
 	"type": "git",
 	"url": "https://github.com/InWayOpenSource/node-bouncer.git"
@@ -21,10 +21,10 @@
 	"test": "tap test/*.js"
     },
     "engines": {
-	"node": "0.10.x || 0.11.x"
+	"node": "0.10.x || 0.11.x || 0.12.x || 4.x || 5.x"
     },
     "dependencies": {
-	"http-proxy": "~1.1.6",
+	"http-proxy": "~1.13.2",
 	"nconf": ">= 0.6.7",
 	"optimist": ">= 0.6.0",
 	"winston": "",

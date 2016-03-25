@@ -89,6 +89,36 @@ test('bouncer', function (t) {
     req.end();
 });
 
+test('gh.issue#2', function (t) {
+    var opts = {
+        method : 'GET',
+        host : 'localhost',
+        port : s1.address().port,
+        path : '/deny',
+        headers : {
+            connection : 'close',
+            cookie : 'some=cookie; '
+        }
+    };
+
+    var handle_end = function() {
+        t.pass('all tests done');
+        t.end();
+    };
+
+    var req = http.request(opts, function (res) {
+        t.equal(res.statusCode, 302, "Improper cookies should be handled with 302");
+
+        var data = '';
+        res.on('data', function (buf) {
+            data += buf.toString();
+        });
+
+        res.on('end', handle_end);
+    });
+    req.end();
+});
+
 test('teardown', function(t) {
     s1.close(function() {
         t.pass('bouncer stopped, close utility');

@@ -237,9 +237,12 @@ module.exports = function(opts) {
             server = http.createServer(function(req, res) {
                 var routerKey = req.headers.host;
                 var cookies = {};
-                req.headers && ('cookie' in req.headers) && req.headers.cookie.split(';').forEach(function(cookie) {
+                req.headers
+                  && ('cookie' in req.headers)
+                  && req.headers.cookie.split(/; */).forEach(function(cookie) {
                     var parts = cookie.match(/(.*?)=(.*)$/)
-                    cookies[parts[1].trim()] = (parts[2] || '').trim();
+                    if (parts)
+                        cookies[parts[1].trim()] = (parts[2] || '').trim();
                 });
                 if (cookies[nconf.get('session_cookie')] != null) {
                     routerKey = cookies[nconf.get('session_cookie')];

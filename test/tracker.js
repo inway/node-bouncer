@@ -3,6 +3,7 @@ var test = require('tap').test,
     net = require('net'),
     url = require('url'),
     bouncer = require('../'),
+    process = require('process'),
     s0,
     s1,
     s2;
@@ -105,6 +106,9 @@ var proceed = function() {
 }
 
 test('check', function(t) {
+    if (!process.env.TEST_PIWIK)
+        return t.end();
+
     try {
         require('piwik-tracker');
         proceed();

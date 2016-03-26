@@ -97,7 +97,7 @@ module.exports = function(opts) {
 
             log.debug("Tracker ready: ", tracker);
         } catch(e) {
-            log.fatal("Piwik tracker module is not available, but configuration is set - fatal error");
+            log.error("Piwik tracker module is not available, but configuration is set - fatal error");
             throw e;
         }
 

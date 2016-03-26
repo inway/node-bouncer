@@ -3,7 +3,6 @@ var test = require('tap').test,
     net = require('net'),
     url = require('url'),
     bouncer = require('../'),
-    process = require('process'),
     s0,
     s1,
     s2;
